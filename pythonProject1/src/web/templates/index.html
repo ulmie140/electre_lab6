@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Метод ЭЛЕКТРА: Выбор торговой фирмы</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-gray-100 min-h-screen font-sans p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-2 text-indigo-400">Многокритериальный выбор: Метод ЭЛЕКТРА</h1>
+        <p class="text-gray-400 mb-8">Лабораторная работа №6. Вариант 1 (Выбор торговой фирмы)</p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700 h-fit">
+                <h2 class="text-xl font-semibold mb-6 border-b border-slate-700 pb-2">Управление порогами</h2>
+
+                <div class="space-y-6">
+                    <div>
+                        <label class="flex items-center space-x-3 mb-4 cursor-pointer">
+                            <input type="checkbox" id="usePareto" checked class="w-5 h-5 text-indigo-600 rounded bg-slate-700 border-slate-600">
+                            <span class="text-sm font-medium">Отбор по множеству Парето</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Индекс согласия (c*): <span id="cVal" class="text-white font-bold">0.5</span></label>
+                        <input type="range" id="cThresh" min="0.1" max="1.0" step="0.05" value="0.5" class="w-full accent-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Индекс несогласия (d*): <span id="dVal" class="text-white font-bold">0.5</span></label>
+                        <input type="range" id="dThresh" min="0.1" max="1.0" step="0.05" value="0.5" class="w-full accent-pink-500">
+                    </div>
+                    <button id="calcBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded transition duration-200 mt-4">
+                        Рассчитать ядро
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700">
+                    <h3 class="text-gray-400 text-sm font-semibold uppercase tracking-wider mb-2">Лучшие альтернативы (Ядро ЭЛЕКТРА)</h3>
+                    <div id="kernelResult" class="text-2xl font-bold text-teal-400 flex flex-wrap gap-2"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                        <h3 class="text-sm font-semibold text-gray-400 mb-3">Оптимальные по Парето</h3>
+                        <ul id="paretoList" class="list-disc list-inside text-indigo-300"></ul>
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                        <h3 class="text-sm font-semibold text-gray-400 mb-3">Веса критериев</h3>
+                        <ul id="weightsList" class="space-y-1 text-gray-300"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cThresh = document.getElementById('cThresh'), dThresh = document.getElementById('dThresh');
+        const cVal = document.getElementById('cVal'), dVal = document.getElementById('dVal');
+
+        cThresh.addEventListener('input', (e) => cVal.textContent = e.target.value);
+        dThresh.addEventListener('input', (e) => dVal.textContent = e.target.value);
+
+        document.getElementById('calcBtn').addEventListener('click', async () => {
+            const data = {
+                c_threshold: parseFloat(cThresh.value),
+                d_threshold: parseFloat(dThresh.value),
+                use_pareto: document.getElementById('usePareto').checked
+            };
+
+            const res = await (await fetch('/api/calculate', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+            })).json();
+
+            document.getElementById('paretoList').innerHTML = res.pareto_set.map(f => `<li>${f}</li>`).join('');
+            document.getElementById('weightsList').innerHTML = `
+                <li>Репутация: <span class="text-white">${res.weights.rep.toFixed(2)}</span></li>
+                <li>Опыт работы: <span class="text-white">${res.weights.exp.toFixed(2)}</span></li>
+                <li>Торговая сеть: <span class="text-white">${res.weights.net.toFixed(2)}</span></li>
+            `;
+            document.getElementById('kernelResult').innerHTML = res.electre.kernel.map(
+                k => `<span class="bg-indigo-900 text-indigo-200 px-3 py-1 rounded-full text-lg border border-indigo-700">${k}</span>`
+            ).join('');
+        });
+
+        document.getElementById('calcBtn').click();
+    </script>
+</body>
+</html>
